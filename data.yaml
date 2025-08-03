@@ -1,0 +1,23 @@
+# ViTO_MD/datasets/data.yaml
+
+train: datasets/malaria/images/train
+val: datasets/malaria/images/val
+test: datasets/malaria/images/test
+nc: 16
+names:
+  - '15'
+  - falciparum_gametocyte
+  - falciparum_ring
+  - falciparum_schizont
+  - falciparum_trophozoite
+  - malariae_gametocyte
+  - malariae_schizont
+  - malariae_trophozoite
+  - ovale_gametocyte
+  - ovale_ring
+  - ovale_schizont
+  - ovale_trophozoite
+  - vivax_gametocyte
+  - vivax_ring
+  - vivax_schizont
+  - vivax_trophozoite
