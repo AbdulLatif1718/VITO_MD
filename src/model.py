@@ -2,26 +2,21 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
-# -------------------------------------------------------------
-# 🔹 Basic Conv block: Conv + BN + SiLU (same as YOLO)
-# -------------------------------------------------------------
+# 🔹 Basic Conv block: Conv + BN + SiLU
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel=3, stride=1, padding=1):
         super().__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kernel, stride, padding, bias=False)
         self.bn = nn.BatchNorm2d(out_channels)
-        self.act = nn.SiLU()  # YOLO-style
+        self.act = nn.SiLU()  # YOLO-style activation
 
     def forward(self, x):
         return self.act(self.bn(self.conv(x)))
 
 
-# -------------------------------------------------------------
 # 🔹 CSP Residual Block
-# -------------------------------------------------------------
 class ResidualBlock(nn.Module):
     def __init__(self, channels):
         super().__init__()
@@ -32,9 +27,7 @@ class ResidualBlock(nn.Module):
         return x + self.conv2(self.conv1(x))
 
 
-# -------------------------------------------------------------
-# 🔹 CBAM (Convolutional Block Attention Module)
-# -------------------------------------------------------------
+# 🔹 CBAM Attention Block
 class CBAM(nn.Module):
     def __init__(self, channels, reduction=16):
         super().__init__()
@@ -47,25 +40,23 @@ class CBAM(nn.Module):
             nn.Conv2d(channels // reduction, channels, 1, bias=False)
         )
 
-        self.spatial = nn.Conv2d(2, 1, 7, padding=3, bias=False)
+        self.spatial = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
 
     def forward(self, x):
-        # Channel attention
+        # Channel Attention
         avg = self.shared_mlp(self.avg_pool(x))
         max_ = self.shared_mlp(self.max_pool(x))
-        ch_attn = torch.sigmoid(avg + max_)
-        x = x * ch_attn
+        channel_att = torch.sigmoid(avg + max_)
+        x = x * channel_att
 
-        # Spatial attention
+        # Spatial Attention
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
-        sp_attn = torch.sigmoid(self.spatial(torch.cat([avg_out, max_out], dim=1)))
-        return x * sp_attn
+        spatial_att = torch.sigmoid(self.spatial(torch.cat([avg_out, max_out], dim=1)))
+        return x * spatial_att
 
 
-# -------------------------------------------------------------
-# 🔹 TransformerLite Block
-# -------------------------------------------------------------
+# 🔹 Lightweight Transformer Block
 class TransformerLite(nn.Module):
     def __init__(self, dim, heads=4, ff_mult=4):
         super().__init__()
@@ -80,16 +71,14 @@ class TransformerLite(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        x_flat = x.view(B, C, -1).permute(0, 2, 1)  # (B, HW, C)
+        x_flat = x.view(B, C, -1).permute(0, 2, 1)  # Shape: (B, HW, C)
         attn_out, _ = self.attn(x_flat, x_flat, x_flat)
         x = self.norm1(x_flat + attn_out)
         ff_out = self.norm2(x + self.ff(x))
         return ff_out.permute(0, 2, 1).view(B, C, H, W)
 
 
-# -------------------------------------------------------------
-# 🔹 Detection Head (YOLO-style)
-# -------------------------------------------------------------
+# 🔹 YOLO-style Detection Head
 class DetectionHead(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
@@ -102,9 +91,7 @@ class DetectionHead(nn.Module):
         return self.head(x)
 
 
-# -------------------------------------------------------------
-# 🔹 Final Malaria Detection Model
-# -------------------------------------------------------------
+# 🔹 Final Model
 class MalariaNet(nn.Module):
     def __init__(self, num_classes=16):
         super().__init__()

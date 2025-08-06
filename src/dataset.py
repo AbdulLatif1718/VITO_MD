@@ -3,10 +3,8 @@
 import os
 import cv2
 import torch
-import random
 import numpy as np
 from torch.utils.data import Dataset
-from torchvision.transforms import functional as TF
 
 
 class YoloMalariaDataset(Dataset):
@@ -36,7 +34,7 @@ class YoloMalariaDataset(Dataset):
         return np.array(labels, dtype=np.float32)
 
     def __getitem__(self, idx):
-        # Image
+        # Load image
         img_path = os.path.join(self.img_dir, self.image_files[idx])
         label_path = os.path.join(self.label_dir, self.image_files[idx].rsplit('.', 1)[0] + ".txt")
 
@@ -44,18 +42,16 @@ class YoloMalariaDataset(Dataset):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         h, w, _ = img.shape
 
-        # Resize
+        # Resize and normalize image
         img = cv2.resize(img, (self.img_size, self.img_size))
         img = img.astype(np.float32) / 255.0
         img = torch.tensor(img).permute(2, 0, 1)
 
-        # Labels
+        # Load and process labels
         targets = self.load_labels(label_path)
         if targets.size > 0:
-            # Scale bbox from normalized to image size
-            targets[:, 1:] *= self.img_size
+            targets[:, 1:] *= self.img_size  # Scale bbox to image size
 
-        # Convert to tensor
         targets = torch.tensor(targets, dtype=torch.float32)
 
         return img, targets
